@@ -21,6 +21,12 @@ END_DATE = pd.Timestamp("2026-07-24 23:59:59", tz="UTC")
 
 MY_NAME = "Farida Nelson"
 
+# Personal conversations intentionally excluded from the
+# professional networking tracker.
+EXCLUDED_CONTACTS = {
+    "Tim Hill",
+    "Paula Ward,Tim Hill",
+}
 
 def main() -> None:
     if not MESSAGES_FILE.exists():
@@ -82,6 +88,10 @@ def main() -> None:
         & filtered["Contact Name"].ne(MY_NAME)
     ].copy()
 
+    filtered = filtered.loc[
+        ~filtered["Contact Name"].isin(EXCLUDED_CONTACTS)
+    ].copy()
+
     filtered["Sent Count"] = filtered["Sent By Me"].astype(int)
     filtered["Received Count"] = (~filtered["Sent By Me"]).astype(int)
 
@@ -104,9 +114,19 @@ def main() -> None:
         .reset_index()
     )
 
-    conversations["Contact Replied"] = (
-        conversations["Messages_Received"] > 0
-    )
+    conversations["Interaction Status"] = "Inbound Only"
+
+    conversations.loc[
+        (conversations["Messages_Sent"] > 0)
+        & (conversations["Messages_Received"] == 0),
+        "Interaction Status",
+    ] = "Outbound Only"
+
+    conversations.loc[
+        (conversations["Messages_Sent"] > 0)
+        & (conversations["Messages_Received"] > 0),
+        "Interaction Status",
+    ] = "Two-Way Conversation"
 
     conversations["Platform"] = "LinkedIn"
     conversations["Activity Type"] = "Conversation"
@@ -121,7 +141,7 @@ def main() -> None:
             "Messages_Sent",
             "Messages_Received",
             "Total_Messages",
-            "Contact Replied",
+            "Interaction Status",            
             "Contact Profile URL",
         ]
     ]
@@ -143,8 +163,18 @@ def main() -> None:
         date_format="%Y-%m-%d %H:%M:%S",
     )
 
-    replied_count = int(
-        conversations["Contact Replied"].sum()
+    status_counts = conversations["Interaction Status"].value_counts()
+
+    two_way_count = int(
+        status_counts.get("Two-Way Conversation", 0)
+    )
+
+    outbound_only_count = int(
+        status_counts.get("Outbound Only", 0)
+    )
+
+    inbound_only_count = int(
+        status_counts.get("Inbound Only", 0)
     )
 
     print(f"Total LinkedIn message rows: {len(messages)}")
@@ -153,15 +183,18 @@ def main() -> None:
         "Message rows within date range: "
         f"{len(filtered)}"
     )
+
     print(
         "Distinct conversation/contact records: "
         f"{len(conversations)}"
     )
-    print(
-        "Conversations with at least one reply: "
-        f"{replied_count}"
-    )
-    print(f"Saved conversation summary to: {OUTPUT_FILE}")
+
+    print("\nInteraction status counts:")
+    print(f"Two-way conversations: {two_way_count}")
+    print(f"Outbound only: {outbound_only_count}")
+    print(f"Inbound only: {inbound_only_count}")
+
+    print(f"\nSaved conversation summary to: {OUTPUT_FILE}")
 
     print("\nFirst five conversations:")
     print(
@@ -172,7 +205,6 @@ def main() -> None:
     print(
         conversations.tail().to_string(index=False)
     )
-
 
 if __name__ == "__main__":
     main()

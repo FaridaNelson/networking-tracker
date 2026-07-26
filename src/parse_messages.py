@@ -133,6 +133,7 @@ def main() -> None:
 
     conversations = conversations[
         [
+            "CONVERSATION ID",
             "First_Message_Date",
             "Last_Message_Date",
             "Activity Type",
@@ -141,7 +142,7 @@ def main() -> None:
             "Messages_Sent",
             "Messages_Received",
             "Total_Messages",
-            "Interaction Status",            
+            "Interaction Status",
             "Contact Profile URL",
         ]
     ]

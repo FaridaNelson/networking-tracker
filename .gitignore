@@ -15,3 +15,5 @@ output/
 
 # VS Code
 .vscode/
+# Generated master datasets
+master/*.csv
